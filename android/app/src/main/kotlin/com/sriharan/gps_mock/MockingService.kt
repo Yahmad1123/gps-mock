@@ -350,7 +350,7 @@ class MockingService : Service() {
                 }
 
                 pushMockLocation(
-                    locationManager, position[0], position[1], bearing, cruiseSpeed
+                    locationManager, position[0], position[1], alt = 10.0, bearing = bearing, speedMps = cruiseSpeed
                 )
 
                 val remaining = (durationSeconds - elapsed).coerceAtLeast(0.0).toInt()
