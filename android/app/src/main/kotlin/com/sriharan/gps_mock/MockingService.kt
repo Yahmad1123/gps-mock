@@ -101,6 +101,7 @@ class MockingService : Service() {
             put("mode", MODE_FIXED)
             put("lat", intent.getDoubleExtra(EXTRA_LAT, 0.0))
             put("lng", intent.getDoubleExtra(EXTRA_LNG, 0.0))
+            put("altitude", intent.getDoubleExtra(EXTRA_ALTITUDE, 10.0))
             put("label", intent.getStringExtra(EXTRA_LABEL) ?: "")
             put("favoriteId", intent.getStringExtra(EXTRA_FAVORITE_ID) ?: "")
         }
@@ -246,6 +247,7 @@ class MockingService : Service() {
     private fun startFixedMocking(command: JSONObject) {
         val lat = command.getDouble("lat")
         val lng = command.getDouble("lng")
+        val altitude = command.optDouble("altitude", 10.0)
         val label = command.optString("label")
         val favoriteId = command.optString("favoriteId")
 
@@ -256,6 +258,7 @@ class MockingService : Service() {
             "mode" to MODE_FIXED,
             "lat" to lat,
             "lng" to lng,
+            "altitude" to altitude,
             "label" to label,
             "favoriteId" to favoriteId,
             "progress" to 0.0,
@@ -272,7 +275,7 @@ class MockingService : Service() {
             installTestProvider(locationManager)
 
             while (isActive) {
-                pushMockLocation(locationManager, lat, lng, bearing = 0f, speedMps = 0f)
+                pushMockLocation(locationManager, lat, lng, altitude, bearing = 0f, speedMps = 0f)
                 delay(PUSH_INTERVAL_MS)
             }
         }
@@ -611,6 +614,7 @@ class MockingService : Service() {
         locationManager: LocationManager,
         lat: Double,
         lng: Double,
+        alt: Double = 10.0,
         bearing: Float,
         speedMps: Float,
     ) {
@@ -620,7 +624,7 @@ class MockingService : Service() {
             val mockLocation = Location(provider).apply {
                 latitude = lat
                 longitude = lng
-                altitude = 10.0
+                altitude = alt
                 time = System.currentTimeMillis()
                 speed = speedMps
                 this.bearing = bearing
@@ -723,6 +727,7 @@ class MockingService : Service() {
         const val ACTION_START_ROUTE = "START_ROUTE_MOCKING"
         const val EXTRA_LAT = "LATITUDE"
         const val EXTRA_LNG = "LONGITUDE"
+        const val EXTRA_ALTITUDE = "ALTITUDE"
         const val EXTRA_LABEL = "LABEL"
         const val EXTRA_FAVORITE_ID = "FAVORITE_ID"
         const val EXTRA_ROUTE_FILE = "ROUTE_FILE"

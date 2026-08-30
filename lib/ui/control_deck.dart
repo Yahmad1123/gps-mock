@@ -443,7 +443,7 @@ class _FixedSpotPanel extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'LATITUDE, LONGITUDE',
+                      'LATITUDE, LONGITUDE · ALT: ${appState.altitude.toStringAsFixed(1)}m',
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: scheme.onSurfaceVariant,
                         letterSpacing: 1,

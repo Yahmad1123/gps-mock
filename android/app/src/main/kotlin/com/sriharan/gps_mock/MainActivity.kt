@@ -19,11 +19,13 @@ class MainActivity : FlutterActivity() {
                 "startMocking" -> {
                     val lat = call.argument<Double>("lat")
                     val lng = call.argument<Double>("lng")
+                    val altitude = call.argument<Double>("altitude") ?: 10.0
                     if (lat != null && lng != null) {
                         val intent = Intent(this, MockingService::class.java).apply {
                             action = MockingService.ACTION_START_FIXED
                             putExtra(MockingService.EXTRA_LAT, lat)
                             putExtra(MockingService.EXTRA_LNG, lng)
+                            putExtra(MockingService.EXTRA_ALTITUDE, altitude)
                             putExtra(MockingService.EXTRA_LABEL, call.argument<String>("label"))
                             putExtra(MockingService.EXTRA_FAVORITE_ID, call.argument<String>("favoriteId"))
                         }

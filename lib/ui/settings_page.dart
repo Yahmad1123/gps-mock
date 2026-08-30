@@ -81,6 +81,13 @@ class _SettingsPageState extends State<SettingsPage> {
 
                 _Section(title: 'Mocking'),
                 _Tile(
+                  icon: Icons.height,
+                  title: 'Altitude',
+                  subtitle:
+                      '${appState.altitude.toStringAsFixed(1)} m above sea level',
+                  onTap: () => _pickAltitude(context, appState),
+                ),
+                _Tile(
                   icon: Icons.checklist,
                   title: 'Setup & permissions',
                   subtitle: 'Mock location app, location, notifications, '
@@ -175,6 +182,66 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _pickAltitude(BuildContext context, AppState appState) async {
+    final controller =
+        TextEditingController(text: appState.altitude.toStringAsFixed(1));
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Mock Altitude'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(
+                signed: true,
+                decimal: true,
+              ),
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Altitude (meters)',
+                suffixText: 'm',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [0.0, 10.0, 50.0, 100.0, 500.0].map((alt) {
+                return ActionChip(
+                  label: Text('${alt.toInt()} m'),
+                  onPressed: () {
+                    controller.text = alt.toString();
+                  },
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final val = double.tryParse(controller.text.trim());
+              if (val != null) {
+                appState.setAltitude(val);
+              }
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
   }
 
   Future<void> _pickTheme(BuildContext context, AppState appState) {

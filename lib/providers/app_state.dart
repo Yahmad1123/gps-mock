@@ -138,6 +138,7 @@ class AppState with ChangeNotifier {
   // UI-level state shared across tabs
   MapStyleId _mapStyle = MapStyleId.auto;
   ThemeMode _themeMode = ThemeMode.system;
+  double _altitude = 10.0;
   List<String> _recentSearches = [];
   List<RouteArea> _routeAreas = [];
   List<MockHistoryEntry> _history = [];
@@ -175,6 +176,7 @@ class AppState with ChangeNotifier {
   String? get routeError => _routeError;
   MapStyleId get mapStyle => _mapStyle;
   ThemeMode get themeMode => _themeMode;
+  double get altitude => _altitude;
   List<String> get recentSearches => List.unmodifiable(_recentSearches);
   List<RouteArea> get routeAreas => List.unmodifiable(_routeAreas);
   WaypointPick? get pendingWaypointPick => _pendingWaypointPick;
@@ -211,6 +213,27 @@ class AppState with ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('theme_mode', mode.name);
+  }
+
+  Future<void> setAltitude(double value) async {
+    if (_altitude == value) return;
+    _altitude = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('mock_altitude', value);
+
+    if (_isMocking && !isNavigating && _currentLocation != null) {
+      unawaited(
+        _client
+            .startMocking(
+              _currentLocation!.latitude,
+              _currentLocation!.longitude,
+              altitude: _altitude,
+              label: _currentAddress,
+            )
+            .catchError((_) {}),
+      );
+    }
   }
 
   /// Remembers a search term so the search sheet can offer it again. Most
@@ -263,6 +286,7 @@ class AppState with ChangeNotifier {
           MapStyleId.auto;
       _themeMode = ThemeMode.values.asNameMap()[prefs.getString('theme_mode')] ??
           ThemeMode.system;
+      _altitude = prefs.getDouble('mock_altitude') ?? 10.0;
       _recentSearches = prefs.getStringList('recent_searches') ?? [];
       _routeAreas = (prefs.getStringList('route_areas') ?? [])
           .map((item) => RouteArea.fromJson(jsonDecode(item)))
@@ -387,7 +411,12 @@ class AppState with ChangeNotifier {
     if (_isMocking && !isNavigating) {
       unawaited(
         _client
-            .startMocking(loc.latitude, loc.longitude, label: _currentAddress)
+            .startMocking(
+              loc.latitude,
+              loc.longitude,
+              altitude: _altitude,
+              label: _currentAddress,
+            )
             .catchError((_) {}),
       );
     }
@@ -425,6 +454,7 @@ class AppState with ChangeNotifier {
       await _client.startMocking(
         loc.latitude,
         loc.longitude,
+        altitude: _altitude,
         label: _currentAddress,
       );
       _isMocking = true;

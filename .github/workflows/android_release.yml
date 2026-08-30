@@ -35,19 +35,29 @@ jobs:
         channel: 'stable'
         cache: true
 
-    - name: Download Android Keystore
+    - name: Set up Keystore
       run: |
-        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+        if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+        else
+          keytool -genkey -v -keystore android/app/upload-keystore.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000 -storepass password123 -keypass password123 -dname "CN=GPSMock, OU=GPSMock, O=GPSMock, L=GPSMock, S=GPSMock, C=US"
+        fi
       
     - name: Build Android Universal APK
       env:
-        STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
-        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        STORE_PASSWORD: ${{ secrets.STORE_PASSWORD || 'password123' }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'password123' }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS || 'upload' }}
       run: flutter pub get && flutter build apk --release
 
     - name: Rename APK
       run: mv build/app/outputs/flutter-apk/app-release.apk "build/app/outputs/flutter-apk/GPS Mock-Universal.apk"
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: GPS-Mock-Universal-APK
+        path: "build/app/outputs/flutter-apk/GPS Mock-Universal.apk"
 
     - name: Get Date
       id: date

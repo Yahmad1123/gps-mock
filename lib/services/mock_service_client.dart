@@ -7,6 +7,7 @@ class MockStatus {
   final String mode; // 'fixed' | 'route'
   final double latitude;
   final double longitude;
+  final double altitude;
   final String label;
   final double progress; // 0..1 (route mode only)
   final int remainingSeconds;
@@ -24,6 +25,7 @@ class MockStatus {
     this.mode = 'fixed',
     this.latitude = 0,
     this.longitude = 0,
+    this.altitude = 10,
     this.label = '',
     this.progress = 0,
     this.remainingSeconds = 0,
@@ -41,6 +43,7 @@ class MockStatus {
         mode: (map['mode'] as String?) ?? 'fixed',
         latitude: (map['lat'] as num?)?.toDouble() ?? 0,
         longitude: (map['lng'] as num?)?.toDouble() ?? 0,
+        altitude: (map['altitude'] as num?)?.toDouble() ?? 10,
         label: (map['label'] as String?) ?? '',
         progress: (map['progress'] as num?)?.toDouble() ?? 0,
         remainingSeconds: (map['remainingSeconds'] as num?)?.toInt() ?? 0,
@@ -58,12 +61,14 @@ class MockServiceClient {
   Future<void> startMocking(
     double lat,
     double lng, {
+    double altitude = 10,
     String? label,
     String? favoriteId,
   }) async {
     await platform.invokeMethod('startMocking', {
       'lat': lat,
       'lng': lng,
+      'altitude': altitude,
       'label': label,
       'favoriteId': favoriteId,
     });
