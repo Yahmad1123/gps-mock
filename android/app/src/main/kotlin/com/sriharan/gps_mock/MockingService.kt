@@ -102,6 +102,7 @@ class MockingService : Service() {
             put("lat", intent.getDoubleExtra(EXTRA_LAT, 0.0))
             put("lng", intent.getDoubleExtra(EXTRA_LNG, 0.0))
             put("altitude", intent.getDoubleExtra(EXTRA_ALTITUDE, 10.0))
+            put("accuracy", intent.getDoubleExtra(EXTRA_ACCURACY, 1.0))
             put("label", intent.getStringExtra(EXTRA_LABEL) ?: "")
             put("favoriteId", intent.getStringExtra(EXTRA_FAVORITE_ID) ?: "")
         }
@@ -248,6 +249,7 @@ class MockingService : Service() {
         val lat = command.getDouble("lat")
         val lng = command.getDouble("lng")
         val altitude = command.optDouble("altitude", 10.0)
+        val accuracy = command.optDouble("accuracy", 1.0).toFloat()
         val label = command.optString("label")
         val favoriteId = command.optString("favoriteId")
 
@@ -259,6 +261,7 @@ class MockingService : Service() {
             "lat" to lat,
             "lng" to lng,
             "altitude" to altitude,
+            "accuracy" to accuracy.toDouble(),
             "label" to label,
             "favoriteId" to favoriteId,
             "progress" to 0.0,
@@ -275,7 +278,7 @@ class MockingService : Service() {
             installTestProvider(locationManager)
 
             while (isActive) {
-                pushMockLocation(locationManager, lat, lng, altitude, bearing = 0f, speedMps = 0f)
+                pushMockLocation(locationManager, lat, lng, altitude, accuracy, bearing = 0f, speedMps = 0f)
                 delay(PUSH_INTERVAL_MS)
             }
         }
@@ -350,7 +353,7 @@ class MockingService : Service() {
                 }
 
                 pushMockLocation(
-                    locationManager, position[0], position[1], alt = 10.0, bearing = bearing, speedMps = cruiseSpeed
+                    locationManager, position[0], position[1], alt = 10.0, accuracyMeters = 1.0f, bearing = bearing, speedMps = cruiseSpeed
                 )
 
                 val remaining = (durationSeconds - elapsed).coerceAtLeast(0.0).toInt()
@@ -615,6 +618,7 @@ class MockingService : Service() {
         lat: Double,
         lng: Double,
         alt: Double = 10.0,
+        accuracyMeters: Float = 1.0f,
         bearing: Float,
         speedMps: Float,
     ) {
@@ -628,11 +632,11 @@ class MockingService : Service() {
                 time = System.currentTimeMillis()
                 speed = speedMps
                 this.bearing = bearing
-                accuracy = 1.0f
+                accuracy = accuracyMeters
                 elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     bearingAccuracyDegrees = 0.1f
-                    verticalAccuracyMeters = 0.1f
+                    verticalAccuracyMeters = (accuracyMeters * 0.5f).coerceAtLeast(0.1f)
                     speedAccuracyMetersPerSecond = 0.1f
                 }
             }
@@ -728,6 +732,7 @@ class MockingService : Service() {
         const val EXTRA_LAT = "LATITUDE"
         const val EXTRA_LNG = "LONGITUDE"
         const val EXTRA_ALTITUDE = "ALTITUDE"
+        const val EXTRA_ACCURACY = "ACCURACY"
         const val EXTRA_LABEL = "LABEL"
         const val EXTRA_FAVORITE_ID = "FAVORITE_ID"
         const val EXTRA_ROUTE_FILE = "ROUTE_FILE"

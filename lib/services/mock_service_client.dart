@@ -8,6 +8,7 @@ class MockStatus {
   final double latitude;
   final double longitude;
   final double altitude;
+  final double accuracy;
   final String label;
   final double progress; // 0..1 (route mode only)
   final int remainingSeconds;
@@ -26,6 +27,7 @@ class MockStatus {
     this.latitude = 0,
     this.longitude = 0,
     this.altitude = 10,
+    this.accuracy = 1,
     this.label = '',
     this.progress = 0,
     this.remainingSeconds = 0,
@@ -44,6 +46,7 @@ class MockStatus {
         latitude: (map['lat'] as num?)?.toDouble() ?? 0,
         longitude: (map['lng'] as num?)?.toDouble() ?? 0,
         altitude: (map['altitude'] as num?)?.toDouble() ?? 10,
+        accuracy: (map['accuracy'] as num?)?.toDouble() ?? 1,
         label: (map['label'] as String?) ?? '',
         progress: (map['progress'] as num?)?.toDouble() ?? 0,
         remainingSeconds: (map['remainingSeconds'] as num?)?.toInt() ?? 0,
@@ -62,6 +65,7 @@ class MockServiceClient {
     double lat,
     double lng, {
     double altitude = 10,
+    double accuracy = 1,
     String? label,
     String? favoriteId,
   }) async {
@@ -69,6 +73,7 @@ class MockServiceClient {
       'lat': lat,
       'lng': lng,
       'altitude': altitude,
+      'accuracy': accuracy,
       'label': label,
       'favoriteId': favoriteId,
     });

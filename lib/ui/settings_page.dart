@@ -88,6 +88,13 @@ class _SettingsPageState extends State<SettingsPage> {
                   onTap: () => _pickAltitude(context, appState),
                 ),
                 _Tile(
+                  icon: Icons.gps_fixed,
+                  title: 'Accuracy',
+                  subtitle:
+                      '±${appState.accuracy.toStringAsFixed(1)} m horizontal accuracy',
+                  onTap: () => _pickAccuracy(context, appState),
+                ),
+                _Tile(
                   icon: Icons.checklist,
                   title: 'Setup & permissions',
                   subtitle: 'Mock location app, location, notifications, '
@@ -233,6 +240,76 @@ class _SettingsPageState extends State<SettingsPage> {
               final val = double.tryParse(controller.text.trim());
               if (val != null) {
                 appState.setAltitude(val);
+              }
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+  }
+
+  Future<void> _pickAccuracy(BuildContext context, AppState appState) async {
+    final controller =
+        TextEditingController(text: appState.accuracy.toStringAsFixed(1));
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Mock Accuracy'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Sets the reported horizontal accuracy radius. Lower values report a more precise GPS fix.',
+              style: Theme.of(dialogContext).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Accuracy radius (meters)',
+                suffixText: 'm',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                (1.0, '1m (High)'),
+                (5.0, '5m (GPS)'),
+                (15.0, '15m (Normal)'),
+                (30.0, '30m (Wi-Fi)'),
+                (65.0, '65m (Cell)'),
+              ].map((item) {
+                return ActionChip(
+                  label: Text(item.$2),
+                  onPressed: () {
+                    controller.text = item.$1.toString();
+                  },
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final val = double.tryParse(controller.text.trim());
+              if (val != null && val >= 0.1) {
+                appState.setAccuracy(val);
               }
               Navigator.of(dialogContext).pop();
             },

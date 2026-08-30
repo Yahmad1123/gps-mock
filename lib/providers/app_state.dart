@@ -139,6 +139,7 @@ class AppState with ChangeNotifier {
   MapStyleId _mapStyle = MapStyleId.auto;
   ThemeMode _themeMode = ThemeMode.system;
   double _altitude = 10.0;
+  double _accuracy = 1.0;
   List<String> _recentSearches = [];
   List<RouteArea> _routeAreas = [];
   List<MockHistoryEntry> _history = [];
@@ -177,6 +178,7 @@ class AppState with ChangeNotifier {
   MapStyleId get mapStyle => _mapStyle;
   ThemeMode get themeMode => _themeMode;
   double get altitude => _altitude;
+  double get accuracy => _accuracy;
   List<String> get recentSearches => List.unmodifiable(_recentSearches);
   List<RouteArea> get routeAreas => List.unmodifiable(_routeAreas);
   WaypointPick? get pendingWaypointPick => _pendingWaypointPick;
@@ -229,6 +231,29 @@ class AppState with ChangeNotifier {
               _currentLocation!.latitude,
               _currentLocation!.longitude,
               altitude: _altitude,
+              accuracy: _accuracy,
+              label: _currentAddress,
+            )
+            .catchError((_) {}),
+      );
+    }
+  }
+
+  Future<void> setAccuracy(double value) async {
+    if (_accuracy == value) return;
+    _accuracy = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('mock_accuracy', value);
+
+    if (_isMocking && !isNavigating && _currentLocation != null) {
+      unawaited(
+        _client
+            .startMocking(
+              _currentLocation!.latitude,
+              _currentLocation!.longitude,
+              altitude: _altitude,
+              accuracy: _accuracy,
               label: _currentAddress,
             )
             .catchError((_) {}),
@@ -287,6 +312,7 @@ class AppState with ChangeNotifier {
       _themeMode = ThemeMode.values.asNameMap()[prefs.getString('theme_mode')] ??
           ThemeMode.system;
       _altitude = prefs.getDouble('mock_altitude') ?? 10.0;
+      _accuracy = prefs.getDouble('mock_accuracy') ?? 1.0;
       _recentSearches = prefs.getStringList('recent_searches') ?? [];
       _routeAreas = (prefs.getStringList('route_areas') ?? [])
           .map((item) => RouteArea.fromJson(jsonDecode(item)))
@@ -415,6 +441,7 @@ class AppState with ChangeNotifier {
               loc.latitude,
               loc.longitude,
               altitude: _altitude,
+              accuracy: _accuracy,
               label: _currentAddress,
             )
             .catchError((_) {}),
@@ -455,6 +482,7 @@ class AppState with ChangeNotifier {
         loc.latitude,
         loc.longitude,
         altitude: _altitude,
+        accuracy: _accuracy,
         label: _currentAddress,
       );
       _isMocking = true;
