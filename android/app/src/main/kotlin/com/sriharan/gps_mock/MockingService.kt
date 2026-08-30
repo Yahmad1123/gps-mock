@@ -103,6 +103,10 @@ class MockingService : Service() {
             put("lng", intent.getDoubleExtra(EXTRA_LNG, 0.0))
             put("altitude", intent.getDoubleExtra(EXTRA_ALTITUDE, 10.0))
             put("accuracy", intent.getDoubleExtra(EXTRA_ACCURACY, 1.0))
+            put("jitter", intent.getBooleanExtra(EXTRA_JITTER, false))
+            put("jitterRadius", intent.getDoubleExtra(EXTRA_JITTER_RADIUS, 2.0))
+            put("satellites", intent.getIntExtra(EXTRA_SATELLITES, 14))
+            put("snr", intent.getDoubleExtra(EXTRA_SNR, 32.0))
             put("label", intent.getStringExtra(EXTRA_LABEL) ?: "")
             put("favoriteId", intent.getStringExtra(EXTRA_FAVORITE_ID) ?: "")
         }
@@ -250,6 +254,10 @@ class MockingService : Service() {
         val lng = command.getDouble("lng")
         val altitude = command.optDouble("altitude", 10.0)
         val accuracy = command.optDouble("accuracy", 1.0).toFloat()
+        val jitter = command.optBoolean("jitter", false)
+        val jitterRadius = command.optDouble("jitterRadius", 2.0)
+        val satellites = command.optInt("satellites", 14)
+        val snr = command.optDouble("snr", 32.0).toFloat()
         val label = command.optString("label")
         val favoriteId = command.optString("favoriteId")
 
@@ -262,6 +270,10 @@ class MockingService : Service() {
             "lng" to lng,
             "altitude" to altitude,
             "accuracy" to accuracy.toDouble(),
+            "jitter" to jitter,
+            "jitterRadius" to jitterRadius,
+            "satellites" to satellites,
+            "snr" to snr.toDouble(),
             "label" to label,
             "favoriteId" to favoriteId,
             "progress" to 0.0,
@@ -272,13 +284,42 @@ class MockingService : Service() {
             "arrivedFromRoute" to command.optBoolean("arrivedFromRoute", false),
         )
 
+        var jitterX = 0.0
+        var jitterY = 0.0
+        var jitterVx = 0.0
+        var jitterVy = 0.0
+
         job?.cancel()
         job = scope.launch {
             val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
             installTestProvider(locationManager)
 
             while (isActive) {
-                pushMockLocation(locationManager, lat, lng, altitude, accuracy, bearing = 0f, speedMps = 0f)
+                var currentLat = lat
+                var currentLng = lng
+                if (jitter && jitterRadius > 0.0) {
+                    jitterVx += (Math.random() - 0.5) * 0.5
+                    jitterVy += (Math.random() - 0.5) * 0.5
+                    jitterVx *= 0.85
+                    jitterVy *= 0.85
+                    jitterX = (jitterX + jitterVx).coerceIn(-jitterRadius, jitterRadius)
+                    jitterY = (jitterY + jitterVy).coerceIn(-jitterRadius, jitterRadius)
+                    val dLat = jitterY / 111111.0
+                    val dLng = jitterX / (111111.0 * kotlin.math.cos(Math.toRadians(lat)).coerceAtLeast(0.01))
+                    currentLat += dLat
+                    currentLng += dLng
+                }
+                pushMockLocation(
+                    locationManager,
+                    currentLat,
+                    currentLng,
+                    alt = altitude,
+                    accuracyMeters = accuracy,
+                    satellites = satellites,
+                    snr = snr,
+                    bearing = 0f,
+                    speedMps = 0f
+                )
                 delay(PUSH_INTERVAL_MS)
             }
         }
@@ -353,7 +394,15 @@ class MockingService : Service() {
                 }
 
                 pushMockLocation(
-                    locationManager, position[0], position[1], alt = 10.0, accuracyMeters = 1.0f, bearing = bearing, speedMps = cruiseSpeed
+                    locationManager,
+                    position[0],
+                    position[1],
+                    alt = 10.0,
+                    accuracyMeters = 1.0f,
+                    satellites = 14,
+                    snr = 32.0f,
+                    bearing = bearing,
+                    speedMps = cruiseSpeed
                 )
 
                 val remaining = (durationSeconds - elapsed).coerceAtLeast(0.0).toInt()
@@ -619,11 +668,21 @@ class MockingService : Service() {
         lng: Double,
         alt: Double = 10.0,
         accuracyMeters: Float = 1.0f,
+        satellites: Int = 14,
+        snr: Float = 32.0f,
         bearing: Float,
         speedMps: Float,
     ) {
         var pushedAny = false
         var refused = false
+        val extras = android.os.Bundle().apply {
+            putInt("satellites", satellites)
+            putInt("satellites_used", (satellites * 0.85).toInt().coerceAtLeast(3))
+            putFloat("meanCn0", snr)
+            putFloat("snr", snr)
+            putFloat("maxCn0", (snr + 6.0f).coerceAtMost(50.0f))
+            putString("mock_source", "GPS_MOCK")
+        }
         for (provider in PROVIDERS) {
             val mockLocation = Location(provider).apply {
                 latitude = lat
@@ -633,6 +692,7 @@ class MockingService : Service() {
                 speed = speedMps
                 this.bearing = bearing
                 accuracy = accuracyMeters
+                this.extras = extras
                 elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     bearingAccuracyDegrees = 0.1f
@@ -733,6 +793,10 @@ class MockingService : Service() {
         const val EXTRA_LNG = "LONGITUDE"
         const val EXTRA_ALTITUDE = "ALTITUDE"
         const val EXTRA_ACCURACY = "ACCURACY"
+        const val EXTRA_JITTER = "JITTER"
+        const val EXTRA_JITTER_RADIUS = "JITTER_RADIUS"
+        const val EXTRA_SATELLITES = "SATELLITES"
+        const val EXTRA_SNR = "SNR"
         const val EXTRA_LABEL = "LABEL"
         const val EXTRA_FAVORITE_ID = "FAVORITE_ID"
         const val EXTRA_ROUTE_FILE = "ROUTE_FILE"

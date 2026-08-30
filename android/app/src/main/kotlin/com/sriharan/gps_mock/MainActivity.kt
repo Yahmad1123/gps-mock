@@ -21,6 +21,10 @@ class MainActivity : FlutterActivity() {
                     val lng = call.argument<Double>("lng")
                     val altitude = call.argument<Double>("altitude") ?: 10.0
                     val accuracy = call.argument<Double>("accuracy") ?: 1.0
+                    val jitter = call.argument<Boolean>("jitter") ?: false
+                    val jitterRadius = call.argument<Double>("jitterRadius") ?: 2.0
+                    val satellites = call.argument<Int>("satellites") ?: 14
+                    val snr = call.argument<Double>("snr") ?: 32.0
                     if (lat != null && lng != null) {
                         val intent = Intent(this, MockingService::class.java).apply {
                             action = MockingService.ACTION_START_FIXED
@@ -28,6 +32,10 @@ class MainActivity : FlutterActivity() {
                             putExtra(MockingService.EXTRA_LNG, lng)
                             putExtra(MockingService.EXTRA_ALTITUDE, altitude)
                             putExtra(MockingService.EXTRA_ACCURACY, accuracy)
+                            putExtra(MockingService.EXTRA_JITTER, jitter)
+                            putExtra(MockingService.EXTRA_JITTER_RADIUS, jitterRadius)
+                            putExtra(MockingService.EXTRA_SATELLITES, satellites)
+                            putExtra(MockingService.EXTRA_SNR, snr)
                             putExtra(MockingService.EXTRA_LABEL, call.argument<String>("label"))
                             putExtra(MockingService.EXTRA_FAVORITE_ID, call.argument<String>("favoriteId"))
                         }
@@ -73,6 +81,42 @@ class MainActivity : FlutterActivity() {
                 }
                 "getMockStatus" -> result.success(MockingService.statusMap())
                 "isMockLocationApp" -> result.success(isMockLocationApp())
+                "canDrawOverlays" -> {
+                    val canDraw = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        android.provider.Settings.canDrawOverlays(this)
+                    } else {
+                        true
+                    }
+                    result.success(canDraw)
+                }
+                "requestOverlayPermission" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !android.provider.Settings.canDrawOverlays(this)) {
+                        val intent = Intent(
+                            android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            android.net.Uri.parse("package:$packageName")
+                        )
+                        startActivity(intent)
+                    }
+                    result.success(null)
+                }
+                "startJoystick" -> {
+                    val intent = Intent(this, FloatingJoystickService::class.java).apply {
+                        action = FloatingJoystickService.ACTION_START
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        startForegroundService(intent)
+                    } else {
+                        startService(intent)
+                    }
+                    result.success(null)
+                }
+                "stopJoystick" -> {
+                    val intent = Intent(this, FloatingJoystickService::class.java).apply {
+                        action = FloatingJoystickService.ACTION_STOP
+                    }
+                    startService(intent)
+                    result.success(null)
+                }
                 "syncFavorites" -> {
                     val json = call.argument<String>("json")
                     if (json != null) {

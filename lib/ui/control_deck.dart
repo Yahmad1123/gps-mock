@@ -485,6 +485,15 @@ class _FixedSpotPanel extends StatelessWidget {
         Row(
           children: [
             _QuickAction(
+              icon: appState.joystickActive
+                  ? Icons.gamepad
+                  : Icons.gamepad_outlined,
+              label: appState.joystickActive ? 'Hide Pad' : 'Joystick',
+              onPressed: location == null
+                  ? null
+                  : () => appState.toggleJoystick(),
+            ),
+            _QuickAction(
               icon: Icons.bookmark_add_outlined,
               label: 'Save',
               onPressed: location == null

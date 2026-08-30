@@ -140,6 +140,11 @@ class AppState with ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
   double _altitude = 10.0;
   double _accuracy = 1.0;
+  bool _jitter = false;
+  double _jitterRadius = 2.0;
+  int _satellites = 14;
+  double _snr = 32.0;
+  bool _joystickActive = false;
   List<String> _recentSearches = [];
   List<RouteArea> _routeAreas = [];
   List<MockHistoryEntry> _history = [];
@@ -179,6 +184,11 @@ class AppState with ChangeNotifier {
   ThemeMode get themeMode => _themeMode;
   double get altitude => _altitude;
   double get accuracy => _accuracy;
+  bool get jitter => _jitter;
+  double get jitterRadius => _jitterRadius;
+  int get satellites => _satellites;
+  double get snr => _snr;
+  bool get joystickActive => _joystickActive;
   List<String> get recentSearches => List.unmodifiable(_recentSearches);
   List<RouteArea> get routeAreas => List.unmodifiable(_routeAreas);
   WaypointPick? get pendingWaypointPick => _pendingWaypointPick;
@@ -223,20 +233,7 @@ class AppState with ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('mock_altitude', value);
-
-    if (_isMocking && !isNavigating && _currentLocation != null) {
-      unawaited(
-        _client
-            .startMocking(
-              _currentLocation!.latitude,
-              _currentLocation!.longitude,
-              altitude: _altitude,
-              accuracy: _accuracy,
-              label: _currentAddress,
-            )
-            .catchError((_) {}),
-      );
-    }
+    _pushCurrentMockIfActive();
   }
 
   Future<void> setAccuracy(double value) async {
@@ -245,7 +242,52 @@ class AppState with ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('mock_accuracy', value);
+    _pushCurrentMockIfActive();
+  }
 
+  Future<void> setJitter(bool enabled, {double? radius}) async {
+    _jitter = enabled;
+    if (radius != null) _jitterRadius = radius;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('mock_jitter', _jitter);
+    await prefs.setDouble('mock_jitter_radius', _jitterRadius);
+    _pushCurrentMockIfActive();
+  }
+
+  Future<void> setSatellites(int count, {double? snr}) async {
+    _satellites = count;
+    if (snr != null) _snr = snr;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('mock_satellites', _satellites);
+    await prefs.setDouble('mock_snr', _snr);
+    _pushCurrentMockIfActive();
+  }
+
+  Future<bool> toggleJoystick() async {
+    if (_joystickActive) {
+      await _client.stopJoystick();
+      _joystickActive = false;
+      notifyListeners();
+      return false;
+    } else {
+      final canDraw = await _client.canDrawOverlays();
+      if (!canDraw) {
+        await _client.requestOverlayPermission();
+        return false;
+      }
+      if (!_isMocking) {
+        await toggleMocking();
+      }
+      await _client.startJoystick();
+      _joystickActive = true;
+      notifyListeners();
+      return true;
+    }
+  }
+
+  void _pushCurrentMockIfActive() {
     if (_isMocking && !isNavigating && _currentLocation != null) {
       unawaited(
         _client
@@ -254,6 +296,10 @@ class AppState with ChangeNotifier {
               _currentLocation!.longitude,
               altitude: _altitude,
               accuracy: _accuracy,
+              jitter: _jitter,
+              jitterRadius: _jitterRadius,
+              satellites: _satellites,
+              snr: _snr,
               label: _currentAddress,
             )
             .catchError((_) {}),
@@ -313,6 +359,10 @@ class AppState with ChangeNotifier {
           ThemeMode.system;
       _altitude = prefs.getDouble('mock_altitude') ?? 10.0;
       _accuracy = prefs.getDouble('mock_accuracy') ?? 1.0;
+      _jitter = prefs.getBool('mock_jitter') ?? false;
+      _jitterRadius = prefs.getDouble('mock_jitter_radius') ?? 2.0;
+      _satellites = prefs.getInt('mock_satellites') ?? 14;
+      _snr = prefs.getDouble('mock_snr') ?? 32.0;
       _recentSearches = prefs.getStringList('recent_searches') ?? [];
       _routeAreas = (prefs.getStringList('route_areas') ?? [])
           .map((item) => RouteArea.fromJson(jsonDecode(item)))
@@ -442,6 +492,10 @@ class AppState with ChangeNotifier {
               loc.longitude,
               altitude: _altitude,
               accuracy: _accuracy,
+              jitter: _jitter,
+              jitterRadius: _jitterRadius,
+              satellites: _satellites,
+              snr: _snr,
               label: _currentAddress,
             )
             .catchError((_) {}),
@@ -483,6 +537,10 @@ class AppState with ChangeNotifier {
         loc.longitude,
         altitude: _altitude,
         accuracy: _accuracy,
+        jitter: _jitter,
+        jitterRadius: _jitterRadius,
+        satellites: _satellites,
+        snr: _snr,
         label: _currentAddress,
       );
       _isMocking = true;

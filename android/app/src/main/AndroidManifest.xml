@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- The in-app updater hands a downloaded release APK to the system
          installer; the user still confirms the install themselves. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
@@ -65,6 +66,11 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <service
+            android:name=".FloatingJoystickService"
+            android:enabled="true"
+            android:exported="false" />
 
         <!-- Invisible trampoline that lets tiles/widgets control mocking
              without hitting background service-start restrictions. -->

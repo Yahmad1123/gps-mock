@@ -81,6 +81,26 @@ class _SettingsPageState extends State<SettingsPage> {
 
                 _Section(title: 'Mocking'),
                 _Tile(
+                  icon: Icons.gamepad_outlined,
+                  title: 'Floating Joystick',
+                  subtitle: appState.joystickActive
+                      ? 'Active on screen · tap to hide'
+                      : 'Overlay joystick on top of other apps',
+                  onTap: () async {
+                    final activated = await appState.toggleJoystick();
+                    if (!mounted) return;
+                    if (!activated && !appState.joystickActive) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Please grant "Display over other apps" permission in Android settings',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                _Tile(
                   icon: Icons.height,
                   title: 'Altitude',
                   subtitle:
@@ -93,6 +113,21 @@ class _SettingsPageState extends State<SettingsPage> {
                   subtitle:
                       '±${appState.accuracy.toStringAsFixed(1)} m horizontal accuracy',
                   onTap: () => _pickAccuracy(context, appState),
+                ),
+                _Tile(
+                  icon: Icons.grain,
+                  title: 'GPS Jitter (Drift)',
+                  subtitle: appState.jitter
+                      ? 'Enabled · ±${appState.jitterRadius.toStringAsFixed(1)} m Brownian motion'
+                      : 'Disabled · mathematically frozen',
+                  onTap: () => _pickJitter(context, appState),
+                ),
+                _Tile(
+                  icon: Icons.satellite_alt_outlined,
+                  title: 'Satellite Simulation',
+                  subtitle:
+                      '${appState.satellites} satellites · ${appState.snr.toStringAsFixed(1)} dB-Hz SNR',
+                  onTap: () => _pickSatellites(context, appState),
                 ),
                 _Tile(
                   icon: Icons.checklist,
@@ -319,6 +354,126 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
     controller.dispose();
+  }
+
+  Future<void> _pickJitter(BuildContext context, AppState appState) async {
+    var enabled = appState.jitter;
+    var radius = appState.jitterRadius;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('GPS Jitter / Drift'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Simulates natural antenna drift and Brownian motion. Prevents apps and games from detecting static GPS fixes.',
+                style: Theme.of(dialogContext).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Enable Drift'),
+                value: enabled,
+                onChanged: (val) => setDialogState(() => enabled = val),
+              ),
+              if (enabled) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Drift radius: ±${radius.toStringAsFixed(1)} m',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Slider(
+                  value: radius,
+                  min: 0.5,
+                  max: 10.0,
+                  divisions: 19,
+                  label: '${radius.toStringAsFixed(1)}m',
+                  onChanged: (val) => setDialogState(() => radius = val),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                appState.setJitter(enabled, radius: radius);
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickSatellites(BuildContext context, AppState appState) async {
+    var count = appState.satellites;
+    var snr = appState.snr;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Satellite Simulation'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Simulate GPS satellite constellation count and signal strength (SNR / C/N0 in dB-Hz).',
+                style: Theme.of(dialogContext).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Visible Satellites: $count',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              Slider(
+                value: count.toDouble(),
+                min: 4,
+                max: 32,
+                divisions: 28,
+                label: '$count',
+                onChanged: (val) => setDialogState(() => count = val.round()),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Signal Strength: ${snr.toStringAsFixed(1)} dB-Hz',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              Slider(
+                value: snr,
+                min: 15.0,
+                max: 45.0,
+                divisions: 30,
+                label: '${snr.toStringAsFixed(1)} dB-Hz',
+                onChanged: (val) => setDialogState(() => snr = val),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                appState.setSatellites(count, snr: snr);
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _pickTheme(BuildContext context, AppState appState) {

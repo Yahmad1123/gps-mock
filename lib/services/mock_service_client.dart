@@ -66,6 +66,10 @@ class MockServiceClient {
     double lng, {
     double altitude = 10,
     double accuracy = 1,
+    bool jitter = false,
+    double jitterRadius = 2.0,
+    int satellites = 14,
+    double snr = 32.0,
     String? label,
     String? favoriteId,
   }) async {
@@ -74,6 +78,10 @@ class MockServiceClient {
       'lng': lng,
       'altitude': altitude,
       'accuracy': accuracy,
+      'jitter': jitter,
+      'jitterRadius': jitterRadius,
+      'satellites': satellites,
+      'snr': snr,
       'label': label,
       'favoriteId': favoriteId,
     });
@@ -153,6 +161,32 @@ class MockServiceClient {
     } catch (_) {
       // Non-critical: tiles/widgets just keep the previous snapshot.
     }
+  }
+
+  Future<bool> canDrawOverlays() async {
+    try {
+      return await platform.invokeMethod<bool>('canDrawOverlays') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> requestOverlayPermission() async {
+    try {
+      await platform.invokeMethod('requestOverlayPermission');
+    } catch (_) {}
+  }
+
+  Future<void> startJoystick() async {
+    try {
+      await platform.invokeMethod('startJoystick');
+    } catch (_) {}
+  }
+
+  Future<void> stopJoystick() async {
+    try {
+      await platform.invokeMethod('stopJoystick');
+    } catch (_) {}
   }
 
   Future<void> openDeveloperSettings() async {
